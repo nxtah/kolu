@@ -48,6 +48,7 @@ export async function registerUser(input: RegisterInput): Promise<{ userId: stri
         password: input.password,
         name: input.displayName,
         username,
+        callbackURL: "/verify-email/success",
       },
     });
     userId = result.user.id;

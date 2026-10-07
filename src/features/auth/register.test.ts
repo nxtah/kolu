@@ -50,6 +50,7 @@ describe("registerUser", () => {
         password: "password1234",
         name: "Test User",
         username: "test_user1",
+        callbackURL: "/verify-email/success",
       },
     });
     expect(tx.user.update).toHaveBeenCalledWith({

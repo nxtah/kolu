@@ -22,6 +22,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Nested full repo copies from Claude Code's worktree tool — never part
+    // of this tree, but not auto-excluded by ESLint 9's flat config.
+    ".claude/worktrees/**",
   ]),
 ]);
 

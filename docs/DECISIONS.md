@@ -97,6 +97,27 @@ These are minimal, low-risk inferences needed to make the schema concrete — no
 
 ### Consequences
 - If this is wrong, `prisma/schema.prisma` is a single migration deep (`20261007081423_init`) and easy to adjust before any real data exists.
+
+## 2026-10-07 — Phase 1: Better Auth adopted
+### Context
+Bootstrap (Phase 0) deferred the auth provider choice. Phase 1 (Identity) needed a real implementation.
+
+### Decision
+Adopt Better Auth, email+password only, with required email verification (Resend for delivery) and password reset. `User.role` stays a single enum; registration lets the user choose SUPPORTER or STREAMER (never ADMIN) — enforced by disabling client input on the `role` field entirely and elevating it server-side inside the same transaction that creates the role-specific profile.
+
+### Alternatives
+- Auth.js (NextAuth v5) — would have required adopting its own account-table shape instead of extending our existing User model.
+
+### Reason
+Better Auth's additionalFields let `User.role`/`username` stay the source of truth on our own table, and its `input: false` option gives a clean, library-level way to prevent role escalation through the public signup API — rather than relying only on application-layer validation.
+
+### Consequences
+- `prisma/schema.prisma` gained `Session`/`Account`/`Verification` models and `User.name`/`emailVerified`/`image` fields.
+- New env vars: `BETTER_AUTH_SECRET`, `RESEND_API_KEY`, `EMAIL_FROM`.
+- OAuth/social login remains unimplemented — email+password only for now.
+
+## Template
+
 ```md
 ## YYYY-MM-DD — Decision title
 ### Context

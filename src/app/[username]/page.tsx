@@ -2,6 +2,11 @@ import { notFound } from "next/navigation";
 
 import { prisma } from "@/lib/db/client";
 
+// Profile data is per-username and can change (bio/visibility edits), so this
+// route must always render fresh from the database rather than being
+// prerendered/cached at build time.
+export const instant = false;
+
 export default async function PublicProfilePage({
   params,
 }: {

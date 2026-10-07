@@ -5,6 +5,10 @@ import { prisma } from "@/lib/db/client";
 
 import { ProfileForm } from "./profile-form";
 
+// Reads the session cookie and the current user's profile on every request —
+// inherently per-visitor and never prerenderable/cacheable.
+export const instant = false;
+
 export default async function MePage() {
   const session = await getCurrentSession();
   if (!session) {

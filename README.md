@@ -12,13 +12,13 @@ making architectural or product changes.
 
 ## Status
 
-This repository currently contains the **Phase 0 (Foundation)** bootstrap
-only, per [`docs/ROADMAP.md`](./docs/ROADMAP.md): project scaffold, database
-setup, project structure, and a media-provider abstraction skeleton. No
-product features (auth flows, real payments, real media provider
-integration, OBS, etc.) are implemented yet — see
-[`docs/DECISIONS.md`](./docs/DECISIONS.md) for what was decided and deferred
-during bootstrap.
+This repository contains **Phase 0 (Foundation)** and **Phase 1 (Identity)**,
+per [`docs/ROADMAP.md`](./docs/ROADMAP.md): project scaffold, database setup,
+project structure, a media-provider abstraction skeleton, and real
+registration/login/email-verification/password-reset flows. Real payments,
+real media provider integration, OBS, and realtime are not implemented yet —
+see [`docs/DECISIONS.md`](./docs/DECISIONS.md) for what was decided and
+deferred so far.
 
 ## Stack
 
@@ -28,9 +28,18 @@ during bootstrap.
 - **Tests**: Vitest
 - **Architecture**: modular monolith (no microservices) — see [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md)
 
-Auth, payment provider, and realtime transport are intentionally **not yet
-chosen** — see the open items in [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md)
-and the deferral decisions in [`docs/DECISIONS.md`](./docs/DECISIONS.md).
+Auth (Better Auth, see below) is implemented as of Phase 1. Payment provider
+and realtime transport are intentionally **not yet chosen** — see the open
+items in [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) and the deferral
+decisions in [`docs/DECISIONS.md`](./docs/DECISIONS.md).
+
+## Identity (Phase 1)
+
+Registration, login, email verification, and password reset are implemented
+via [Better Auth](https://better-auth.com) (email+password only) with
+[Resend](https://resend.com) for email delivery. If `RESEND_API_KEY` is
+unset, emails are logged to the server console instead of sent — see
+`src/lib/email/resend.ts`.
 
 ## Setup
 
@@ -38,7 +47,7 @@ Requires Node.js 22 LTS, Docker, and Docker Compose.
 
 ```bash
 npm install
-cp .env.example .env   # adjust if needed; defaults work out of the box
+cp .env.example .env   # then set BETTER_AUTH_SECRET (openssl rand -base64 32) and RESEND_API_KEY
 docker compose up -d   # starts Postgres on localhost:5433
 npx prisma migrate dev
 npm run dev             # http://localhost:3000
@@ -67,7 +76,7 @@ src/
 ├── components/          # Shared UI components
 ├── features/            # Feature modules (auth, donations, media-donations)
 ├── lib/
-│   ├── auth/            # Placeholder session contract (no library chosen yet)
+│   ├── auth/            # Better Auth server/client instances, session helpers
 │   ├── db/              # Prisma client singleton
 │   ├── payments/        # Provider-agnostic payment boundary (no SDK yet)
 │   ├── media/

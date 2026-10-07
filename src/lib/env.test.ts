@@ -42,6 +42,12 @@ describe("loadEnv", () => {
     expect(env.RESEND_API_KEY).toBeUndefined();
   });
 
+  it("treats an empty-string RESEND_API_KEY the same as unset", () => {
+    // dotenv parses "RESEND_API_KEY=" (no value) as "", not undefined.
+    const env = loadEnv({ ...BASE_VALID_ENV, RESEND_API_KEY: "" });
+    expect(env.RESEND_API_KEY).toBeUndefined();
+  });
+
   it("throws when EMAIL_FROM is missing", () => {
     const { EMAIL_FROM, ...rest } = BASE_VALID_ENV;
     expect(() => loadEnv(rest)).toThrow(/EMAIL_FROM/);

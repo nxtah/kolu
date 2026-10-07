@@ -8,7 +8,13 @@ const envSchema = z.object({
   DATABASE_URL: z.string().url(),
   NEXT_PUBLIC_APP_URL: z.string().url(),
   BETTER_AUTH_SECRET: z.string().min(32),
-  RESEND_API_KEY: z.string().min(1).optional(),
+  // An unset-but-present env var (e.g. "RESEND_API_KEY=" in .env) arrives as
+  // an empty string, not undefined — treat it the same as unset rather than
+  // failing min(1) validation.
+  RESEND_API_KEY: z.preprocess(
+    (v) => (v === "" ? undefined : v),
+    z.string().min(1).optional(),
+  ),
   EMAIL_FROM: z.string().min(1),
 });
 

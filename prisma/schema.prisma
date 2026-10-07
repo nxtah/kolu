@@ -1,0 +1,406 @@
+// KOLU database schema — Phase 0 (Foundation).
+// Models and fields follow docs/DATABASE.md exactly. Do not add tables beyond
+// what that document specifies as MVP scope (see "Future entities" there for
+// what is intentionally deferred: Badge, Achievement, Community, Payout, etc).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Connection URL lives in prisma.config.ts (CLI/migrate) and is passed
+// explicitly to the driver adapter in src/lib/db/client.ts (runtime) — Prisma
+// 7 no longer reads `url` from the schema file itself.
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+// Not spelled out verbatim in docs/DATABASE.md; minimal inference required to
+// make `User.role` concrete. Flagged in docs/DECISIONS.md.
+enum UserRole {
+  SUPPORTER
+  STREAMER
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  BANNED
+}
+
+// State machine per docs/PAYMENT.md.
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  EXPIRED
+  REFUNDED
+  DISPUTED
+}
+
+// State machine per docs/PAYMENT.md (donation side).
+enum DonationStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  EXPIRED
+  REFUNDED
+  DISPUTED
+}
+
+// docs/DATABASE.md + docs/MEDIA_DONATION.md. OTHER exists for schema
+// forward-compatibility only — the API layer must never accept it as a
+// selectable/playable provider (see docs/MEDIA_DONATION.md).
+enum MediaProvider {
+  YOUTUBE
+  TIKTOK
+  TWITCH
+  INSTAGRAM
+  X
+  OTHER
+}
+
+enum MediaContentType {
+  VIDEO
+  CLIP
+  REEL
+}
+
+enum MediaStatus {
+  PENDING
+  APPROVED
+  PLAYING
+  COMPLETED
+  REJECTED
+  FAILED
+  EXPIRED
+}
+
+enum MediaModerationStatus {
+  NOT_REQUIRED
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ReportTargetType {
+  USER
+  DONATION
+  MEDIA_DONATION
+}
+
+enum ReportStatus {
+  PENDING
+  REVIEWED
+  DISMISSED
+}
+
+// ---------------------------------------------------------------------------
+// Identity
+// ---------------------------------------------------------------------------
+
+model User {
+  id        String     @id @default(cuid())
+  email     String     @unique
+  username  String     @unique
+  role      UserRole
+  status    UserStatus @default(ACTIVE)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  profile          Profile?
+  streamerProfile  StreamerProfile?
+  supporterProfile SupporterProfile?
+  donationsMade    Donation[]         @relation("SupporterDonations")
+  xpTransactions   XPTransaction[]
+  follows          Follow[]           @relation("FollowerFollows")
+  notifications    Notification[]
+  reportsFiled     Report[]           @relation("ReporterReports")
+  reportsReviewed  Report[]           @relation("ReviewerReports")
+  adminActions     AdminAction[]
+
+  @@map("users")
+}
+
+model Profile {
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  displayName      String
+  avatarUrl        String?
+  bio              String?
+  publicVisibility Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("profiles")
+}
+
+model StreamerProfile {
+  id                 String   @id @default(cuid())
+  userId             String   @unique
+  bannerUrl          String?
+  description        String?
+  donationEnabled    Boolean  @default(false)
+  verificationStatus String   @default("UNVERIFIED")
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  donations      Donation[]      @relation("StreamerDonations")
+  overlay        Overlay?
+  alertSetting   AlertSetting?
+  mediaPolicy    MediaPolicy?
+  followers      Follow[]        @relation("StreamerFollowers")
+  mediaQueueItems MediaQueueItem[]
+
+  @@map("streamer_profiles")
+}
+
+model SupporterProfile {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  xpTotal   Int      @default(0)
+  level     Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("supporter_profiles")
+}
+
+// ---------------------------------------------------------------------------
+// Donations & Payments
+// ---------------------------------------------------------------------------
+
+model Donation {
+  id          String         @id @default(cuid())
+  streamerId  String
+  supporterId String?
+  // Integer minor currency unit — never float (docs/CLAUDE.md rule 11,
+  // docs/PAYMENT.md).
+  amount      Int
+  currency    String
+  displayName String
+  message     String?
+  anonymous   Boolean        @default(false)
+  status      DonationStatus @default(PENDING)
+  paymentId   String?        @unique
+  createdAt   DateTime       @default(now())
+  completedAt DateTime?
+
+  streamer  StreamerProfile @relation("StreamerDonations", fields: [streamerId], references: [id], onDelete: Restrict)
+  supporter User?           @relation("SupporterDonations", fields: [supporterId], references: [id], onDelete: SetNull)
+  payment   Payment?        @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  media     MediaDonation?
+
+  @@map("donations")
+}
+
+model Payment {
+  id                   String        @id @default(cuid())
+  provider             String
+  providerReference    String        @unique
+  amount               Int
+  currency             String
+  status               PaymentStatus @default(PENDING)
+  rawReferenceMetadata Json?
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+
+  donation Donation?
+
+  @@map("payments")
+}
+
+// ---------------------------------------------------------------------------
+// Media Donation
+// ---------------------------------------------------------------------------
+
+model MediaDonation {
+  id               String                 @id @default(cuid())
+  // MVP allows at most one media attachment per donation.
+  donationId       String                 @unique
+  provider         MediaProvider
+  contentType      MediaContentType
+  sourceUrl        String
+  normalizedUrl    String
+  contentId        String
+  title            String?
+  thumbnailUrl     String?
+  durationMs       Int?
+  status           MediaStatus            @default(PENDING)
+  moderationStatus MediaModerationStatus  @default(PENDING)
+  rejectionReason  String?
+  submittedAt      DateTime               @default(now())
+  approvedAt       DateTime?
+  startedAt        DateTime?
+  completedAt      DateTime?
+
+  donation       Donation         @relation(fields: [donationId], references: [id], onDelete: Cascade)
+  mediaQueueItem MediaQueueItem?
+
+  @@map("media_donations")
+}
+
+// Per-streamer media settings. Kept as its own model rather than merged into
+// AlertSetting — docs/DATABASE.md leaves this choice open; a separate model
+// keeps donation alerting and media policy independently extensible.
+model MediaPolicy {
+  streamerId      String   @id
+  enabled         Boolean  @default(false)
+  youtubeEnabled  Boolean  @default(true)
+  tiktokEnabled   Boolean  @default(true)
+  minAmount       Int      @default(0)
+  maxDurationMs   Int      @default(60000)
+  maxQueueSize    Int      @default(10)
+  autoApprove     Boolean  @default(false)
+  cooldownMs      Int      @default(0)
+  autoplay        Boolean  @default(true)
+  audioEnabled    Boolean  @default(true)
+  updatedAt       DateTime @updatedAt
+
+  streamer StreamerProfile @relation(fields: [streamerId], references: [id], onDelete: Cascade)
+
+  @@map("media_policies")
+}
+
+model MediaQueueItem {
+  id              String      @id @default(cuid())
+  streamerId      String
+  mediaDonationId String      @unique
+  position        Int
+  status          MediaStatus @default(PENDING)
+  createdAt       DateTime    @default(now())
+  startedAt       DateTime?
+  completedAt     DateTime?
+
+  streamer      StreamerProfile @relation(fields: [streamerId], references: [id], onDelete: Cascade)
+  mediaDonation MediaDonation   @relation(fields: [mediaDonationId], references: [id], onDelete: Cascade)
+
+  @@map("media_queue_items")
+}
+
+// ---------------------------------------------------------------------------
+// Progression
+// ---------------------------------------------------------------------------
+
+model XPTransaction {
+  id         String   @id @default(cuid())
+  userId     String
+  amount     Int
+  sourceType String
+  sourceId   String
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // A given source (e.g. one donation) must only ever award XP once —
+  // enforces the idempotent-XP rule (docs/CLAUDE.md rule 14) at the schema
+  // level in addition to application logic.
+  @@unique([sourceType, sourceId])
+  @@map("xp_transactions")
+}
+
+// ---------------------------------------------------------------------------
+// OBS / Alerts
+// ---------------------------------------------------------------------------
+
+model Overlay {
+  id             String   @id @default(cuid())
+  streamerId     String   @unique
+  secureTokenHash String  @unique
+  enabled        Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  streamer StreamerProfile @relation(fields: [streamerId], references: [id], onDelete: Cascade)
+
+  @@map("overlays")
+}
+
+model AlertSetting {
+  id              String   @id @default(cuid())
+  streamerId      String   @unique
+  enabled         Boolean  @default(true)
+  durationMs      Int      @default(8000)
+  minAmount       Int      @default(0)
+  showAmount      Boolean  @default(true)
+  showMessage     Boolean  @default(true)
+  ttsEnabled      Boolean  @default(false)
+  soundUrl        String?
+  animationConfig Json?
+  updatedAt       DateTime @updatedAt
+
+  streamer StreamerProfile @relation(fields: [streamerId], references: [id], onDelete: Cascade)
+
+  @@map("alert_settings")
+}
+
+// ---------------------------------------------------------------------------
+// Social / Moderation
+// ---------------------------------------------------------------------------
+
+model Follow {
+  id         String   @id @default(cuid())
+  followerId String
+  streamerId String
+  createdAt  DateTime @default(now())
+
+  follower User            @relation("FollowerFollows", fields: [followerId], references: [id], onDelete: Cascade)
+  streamer StreamerProfile @relation("StreamerFollowers", fields: [streamerId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, streamerId])
+  @@map("follows")
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  type      String
+  title     String
+  body      String
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+model Report {
+  id         String           @id @default(cuid())
+  reporterId String
+  targetType ReportTargetType
+  targetId   String
+  reason     String
+  status     ReportStatus     @default(PENDING)
+  reviewedBy String?
+  reviewedAt DateTime?
+  createdAt  DateTime         @default(now())
+
+  reporter User  @relation("ReporterReports", fields: [reporterId], references: [id], onDelete: Cascade)
+  reviewer User? @relation("ReviewerReports", fields: [reviewedBy], references: [id], onDelete: SetNull)
+
+  @@map("reports")
+}
+
+model AdminAction {
+  id         String   @id @default(cuid())
+  adminId    String
+  action     String
+  targetType String
+  targetId   String
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  admin User @relation(fields: [adminId], references: [id], onDelete: Restrict)
+
+  @@map("admin_actions")
+}

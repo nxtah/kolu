@@ -9,6 +9,13 @@ const updateProfileSchema = z.object({
   avatarUrl: z.string().trim().url().max(2048).optional(),
   bio: z.string().trim().max(500).optional(),
   publicVisibility: z.boolean().optional(),
+  // Streamer-only fields — see the role check below. Accepting them in the
+  // same schema keeps one endpoint for profile editing; the role check is
+  // what actually enforces who can set them (never the presence of the
+  // field in the request body).
+  bannerUrl: z.string().trim().url().max(2048).optional(),
+  description: z.string().trim().max(1000).optional(),
+  donationEnabled: z.boolean().optional(),
 });
 
 export async function PATCH(request: Request) {
@@ -21,9 +28,25 @@ export async function PATCH(request: Request) {
       throw new ValidationError(parsed.error.issues[0]?.message ?? "Invalid request.");
     }
 
-    await prisma.profile.update({
-      where: { userId: session.user.id },
-      data: parsed.data,
+    const { bannerUrl, description, donationEnabled, ...profileData } = parsed.data;
+
+    await prisma.$transaction(async (tx) => {
+      await tx.profile.update({
+        where: { userId: session.user.id },
+        data: profileData,
+      });
+
+      // Never trust the client's role — only a session whose own role is
+      // STREAMER can ever touch StreamerProfile fields, regardless of what
+      // the request body contains.
+      const hasStreamerFields =
+        bannerUrl !== undefined || description !== undefined || donationEnabled !== undefined;
+      if (hasStreamerFields && session.user.role === "STREAMER") {
+        await tx.streamerProfile.update({
+          where: { userId: session.user.id },
+          data: { bannerUrl, description, donationEnabled },
+        });
+      }
     });
 
     return Response.json({ ok: true }, { status: 200 });

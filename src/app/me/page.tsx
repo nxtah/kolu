@@ -22,6 +22,11 @@ export default async function MePage() {
     throw new Error("Profile not found for authenticated user");
   }
 
+  const streamerProfile =
+    session.user.role === "STREAMER"
+      ? await prisma.streamerProfile.findUnique({ where: { userId: session.user.id } })
+      : null;
+
   return (
     <main className="flex flex-1 flex-col items-center justify-center bg-background px-6 text-foreground">
       <div className="flex w-full max-w-sm flex-col gap-4">
@@ -30,6 +35,15 @@ export default async function MePage() {
           initialDisplayName={profile.displayName}
           initialBio={profile.bio ?? ""}
           initialPublicVisibility={profile.publicVisibility}
+          streamerFields={
+            streamerProfile
+              ? {
+                  initialBannerUrl: streamerProfile.bannerUrl ?? "",
+                  initialDescription: streamerProfile.description ?? "",
+                  initialDonationEnabled: streamerProfile.donationEnabled,
+                }
+              : null
+          }
         />
       </div>
     </main>

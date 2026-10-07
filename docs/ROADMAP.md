@@ -1,23 +1,23 @@
 # KOLU — Development Roadmap v0.2
 
 ## Phase 0 — Foundation
-- [ ] Repository
-- [ ] Next.js/TypeScript/Tailwind
-- [ ] PostgreSQL/Prisma
-- [ ] Auth selection
-- [ ] Payment provider selection
-- [ ] Realtime strategy
-- [ ] CI/typecheck/lint
-- [ ] Environment setup
-- [ ] Provider adapter pattern
+- [x] Repository
+- [x] Next.js/TypeScript/Tailwind
+- [x] PostgreSQL/Prisma
+- [x] Auth selection (Better Auth — decided and implemented in Phase 1)
+- [ ] Payment provider selection (Xendit vs Midtrans — still open, see docs/PAYMENT.md)
+- [ ] Realtime strategy (WebSocket vs SSE vs managed — still open, see docs/ARCHITECTURE.md)
+- [x] CI/typecheck/lint (tsc/eslint/vitest scripts; no GitHub Actions workflow yet)
+- [x] Environment setup
+- [x] Provider adapter pattern
 
 ## Phase 1 — Identity
-- [ ] Auth
-- [ ] Roles
-- [ ] Profile
-- [ ] Streamer profile
-- [ ] Supporter profile
-- [ ] Authorization
+- [x] Auth (Better Auth, email+password, required verification, password reset)
+- [x] Roles (SUPPORTER/STREAMER enforced at registration; ADMIN unreachable via public API)
+- [x] Profile (displayName/bio/publicVisibility, editable via /me)
+- [x] Streamer profile (StreamerProfile created at registration; bannerUrl/description/donationEnabled editable via /me)
+- [x] Supporter profile (SupporterProfile created at registration; XP/level fields deferred to Phase 4)
+- [x] Authorization (requireSession/requireRole/requireOwnership, verified server-side)
 
 ## Phase 2 — Donation
 - [ ] Donation page

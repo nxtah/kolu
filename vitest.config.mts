@@ -20,6 +20,8 @@ export default defineConfig({
       // own validation logic is tested directly via loadEnv() instead.
       DATABASE_URL: "postgresql://test:test@localhost:5433/test",
       NEXT_PUBLIC_APP_URL: "http://localhost:3000",
+      BETTER_AUTH_SECRET: "test-secret-aaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      EMAIL_FROM: "KOLU <test@example.com>",
     },
   },
 });

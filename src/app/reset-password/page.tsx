@@ -2,6 +2,7 @@
 
 import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 
 import { authClient } from "@/lib/auth/client";
 
@@ -38,9 +39,9 @@ function ResetPasswordForm() {
         <h1 className="text-2xl font-semibold">Password updated</h1>
         <p className="max-w-md text-sm text-foreground/70">
           You can now{" "}
-          <a href="/login" className="text-brand-accent underline">
+          <Link href="/login" className="text-brand-accent underline">
             log in
-          </a>{" "}
+          </Link>{" "}
           with your new password.
         </p>
       </main>

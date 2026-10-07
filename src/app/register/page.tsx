@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 
 type Role = "SUPPORTER" | "STREAMER";
 
@@ -48,9 +49,9 @@ export default function RegisterPage() {
         <h1 className="text-2xl font-semibold">Check your email</h1>
         <p className="max-w-md text-sm text-foreground/70">
           We sent a verification link to your email address. Verify it, then{" "}
-          <a href="/login" className="text-brand-accent underline">
+          <Link href="/login" className="text-brand-accent underline">
             log in
-          </a>
+          </Link>
           .
         </p>
       </main>

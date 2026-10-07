@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 import { authClient } from "@/lib/auth/client";
 
@@ -65,9 +66,9 @@ export default function LoginPage() {
           {loading ? "Logging in…" : "Log in"}
         </button>
 
-        <a href="/forgot-password" className="text-sm text-foreground/70 underline">
+        <Link href="/forgot-password" className="text-sm text-foreground/70 underline">
           Forgot your password?
-        </a>
+        </Link>
       </form>
     </main>
   );

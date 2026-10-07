@@ -2,6 +2,7 @@
 
 import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 
 // Better Auth's verification link points at its own API endpoint
 // (GET /api/auth/verify-email?token=...&callbackURL=...), which validates
@@ -25,9 +26,9 @@ function VerifyEmailSuccessContent() {
         <h1 className="text-2xl font-semibold">Verification failed</h1>
         <p className="max-w-md text-sm text-foreground/70">
           That verification link is invalid or has expired. You can{" "}
-          <a href="/resend-verification" className="text-brand-accent underline">
+          <Link href="/resend-verification" className="text-brand-accent underline">
             request a new one
-          </a>
+          </Link>
           .
         </p>
       </main>
@@ -39,9 +40,9 @@ function VerifyEmailSuccessContent() {
       <h1 className="text-2xl font-semibold">Email verified</h1>
       <p className="max-w-md text-sm text-foreground/70">
         Your email is verified. You can now{" "}
-        <a href="/login" className="text-brand-accent underline">
+        <Link href="/login" className="text-brand-accent underline">
           log in
-        </a>
+        </Link>
         .
       </p>
     </main>

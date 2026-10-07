@@ -116,6 +116,23 @@ Better Auth's additionalFields let `User.role`/`username` stay the source of tru
 - New env vars: `BETTER_AUTH_SECRET`, `RESEND_API_KEY`, `EMAIL_FROM`.
 - OAuth/social login remains unimplemented — email+password only for now.
 
+## 2026-10-07 — Phase 1: unverified accounts cannot log in at all
+### Context
+docs/superpowers/specs/2026-10-07-phase1-identity-design.md (around line 67-70) said unverified accounts "can still log in, but are blocked server-side from role-gated actions." The actual implementation in `src/lib/auth/server.ts` sets `emailAndPassword.requireEmailVerification: true`, which makes Better Auth reject sign-in entirely for unverified accounts — the opposite of what the spec described.
+
+### Decision
+Keep the stricter Better Auth behavior (`requireEmailVerification: true`) and correct the spec record instead of changing the implementation. Unverified accounts cannot log in at all; they must verify their email first. `src/app/login/page.tsx` now shows a link to `/resend-verification` alongside any sign-in error so a blocked user has a path forward.
+
+### Alternatives
+- Set `requireEmailVerification: false` and add role-gated-action checks to match the original spec text.
+
+### Reason
+This phase has no role-gated actions to gate, so building that enforcement path only to match stale spec wording isn't worth the complexity. The simpler, stricter behavior is intentional, not a bug.
+
+### Consequences
+- The login page must always offer a way to request a new verification link, since a generic auth error could mean either a wrong password or an unverified email.
+- docs/superpowers/specs/2026-10-07-phase1-identity-design.md's wording around login/verification is superseded by this entry.
+
 ## Template
 
 ```md

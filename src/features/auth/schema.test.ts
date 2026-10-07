@@ -36,6 +36,16 @@ describe("registerSchema", () => {
     expect(result.success).toBe(false);
   });
 
+  it("rejects a reserved username", () => {
+    const result = registerSchema.safeParse({ ...valid, username: "login" });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects a reserved username regardless of case", () => {
+    const result = registerSchema.safeParse({ ...valid, username: "Admin" });
+    expect(result.success).toBe(false);
+  });
+
   it("rejects role values outside SUPPORTER/STREAMER", () => {
     const result = registerSchema.safeParse({ ...valid, role: "ADMIN" });
     expect(result.success).toBe(false);

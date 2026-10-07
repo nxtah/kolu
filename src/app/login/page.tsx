@@ -56,7 +56,14 @@ export default function LoginPage() {
           />
         </label>
 
-        {error && <p className="text-sm text-red-400">{error}</p>}
+        {error && (
+          <div className="flex flex-col gap-1">
+            <p className="text-sm text-red-400">{error}</p>
+            <Link href="/resend-verification" className="text-sm text-foreground/70 underline">
+              Need a new verification link?
+            </Link>
+          </div>
+        )}
 
         <button
           type="submit"
